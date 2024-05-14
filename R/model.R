@@ -131,6 +131,10 @@ model_parse_args.GSRPDE <- function(x, args) {
       cat("Spatial regression model:", deparse(private$formula_), "\n")
       cat("PDE:", private$penalty_$operator, "\n")
       ## S3 dispatch for specific printing logic
+    },
+    inference = function(type = c("wald", "speckman", "esf"), ci_type = c("exact", "non-exact"), C, beta0, n_flips = 1000) {
+        ci_type_ = if(ci_type == "exact") 0 else 1
+        private$model_$inference(type, ci_type_, as.matrix(C), as.matrix(beta0), n_flips)
     }
   ),
   ## active bindings
@@ -139,7 +143,9 @@ model_parse_args.GSRPDE <- function(x, args) {
     fitted = function() as.matrix(private$model_$fitted()),
     gcvs = function() as.matrix(private$model_$gcvs()),
     edfs = function() as.matrix(private$model_$edfs()),
-    optimal_lambda = function() as.matrix(private$model_$optimum())
+    optimal_lambda = function() as.matrix(private$model_$optimum()),
+    pvalues = function() as.matrix(private$model_$pvalues()),
+    confidence_interval = function() as.matrix(private$model_$confidence_intervals())
   )
 )
 

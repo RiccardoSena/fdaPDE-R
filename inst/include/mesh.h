@@ -30,7 +30,7 @@ namespace r {
 // Rcpp wrapper for mesh. M : local dimension, N : embedding dimension
 template <int M, int N> class Mesh {
    private:
-    using NeighborsContainerType = typename core::Mesh<M, N>::NeighborsContainerType;
+  using NeighborsContainerType = DMatrix<int>;
     using NodesType = typename std::conditional_t<M == 1 && N == 1, DVector<double>, DMatrix<double>>;
     core::Mesh<M, N> domain_ {};
    public:
@@ -48,7 +48,7 @@ template <int M, int N> class Mesh {
     const core::Mesh<M, N>& domain() const { return domain_; }
     const NodesType& nodes() const { return domain_.nodes(); }
     const DMatrix<int, Eigen::RowMajor>& elements() const { return domain_.elements(); }
-    const NeighborsContainerType& neighbors() const { return domain_.neighbors(); }
+    NeighborsContainerType neighbors() const { return domain_.neighbors(); }
     DMatrix<int> boundary() const { return domain_.boundary(); }
     // solves point location problem over triangulation
     DVector<int> locate(const DMatrix<double>& points) { return domain_.locate(points); }

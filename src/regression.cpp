@@ -35,7 +35,11 @@ RCPP_MODULE(cpp_srpde) {
     Rcpp::class_<RegressionModel<models::SRPDE>>("cpp_regression").regression_rcpp_interface(models::SRPDE);
     Rcpp::class_<SRPDE>("cpp_srpde")
       .derives<RegressionModel<models::SRPDE>>("cpp_regression")
-      .constructor<Rcpp::Environment, int>();
+      .constructor<Rcpp::Environment, int>()
+      .method("inference"            , &SRPDE::inference            )
+      .method("set_spatial_locations", &SRPDE::set_spatial_locations)
+      .method("pvalues"              , &SRPDE::pvalues              )
+      .method("confidence_intervals" , &SRPDE::confidence_intervals );
 };
 
 using cpp_gsrpde_space = GSRPDE<models::SpaceOnly>;

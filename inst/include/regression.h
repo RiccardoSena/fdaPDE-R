@@ -31,6 +31,11 @@
 #include "fdaPDE/fdaPDE/calibration/rmse.h"
 #include "pde.h"
 #include "utils.h"
+#include <fdaPDE/models/regression/inference.h>
+#include <fdaPDE/models/regression/inference_base.h>
+#include <fdaPDE/models/regression/esf.h>
+#include <fdaPDE/models/regression/wald.h>
+#include <fdaPDE/models/regression/speckman.h>
 
 namespace fdapde {
 namespace r {
@@ -73,24 +78,24 @@ template <typename ModelType> class RegressionModel {
         // recover calibration type
         std::string calibration = r_input["calibration"];
         if (calibration == "off") { optim_lambda_ = Rcpp::as<DVector<double>>(r_input["lambda"]); }
-        if (calibration == "gcv") {
-            std::string edf = r_input["edf"];
-            if (edf == "exact") {
-                gcv_.set_edf_strategy(models::ExactEDF());
-            } else {   // stochastic approximation of edf
-                int n_mc_samples = Rcpp::as<int>(r_input["n_mc_samples"]);
-                int seed = Rcpp::as<int>(r_input["seed"]);
-                gcv_.set_edf_strategy(models::StochasticEDF(n_mc_samples, seed));
-            }
-            gcv_.set_optimizer(parse_optimizer<models::GCV>(r_input));
-            optim_lambda_ = gcv_(Rcpp::as<DMatrix<double>>(r_input["lambda"])).fit(model_);
-        }
-        if (calibration == "kcv") {
-            int n_folds = Rcpp::as<int>(r_input["n_folds"]);
-            int seed = r_input["seed"] == R_NilValue ? fdapde::random_seed : Rcpp::as<int>(r_input["seed"]);
-            kcv_ = calibration::KCV(n_folds, seed);
-            optim_lambda_ = kcv_(Rcpp::as<DMatrix<double>>(r_input["lambda"]), calibration::RMSE()).fit(model_);
-        }
+        // if (calibration == "gcv") {
+        //     std::string edf = r_input["edf"];
+        //     if (edf == "exact") {
+        //         gcv_.set_edf_strategy(models::ExactEDF());
+        //     } else {   // stochastic approximation of edf
+        //         int n_mc_samples = Rcpp::as<int>(r_input["n_mc_samples"]);
+        //         int seed = Rcpp::as<int>(r_input["seed"]);
+        //         gcv_.set_edf_strategy(models::StochasticEDF(n_mc_samples, seed));
+        //     }
+        //     gcv_.set_optimizer(parse_optimizer<models::GCV>(r_input));
+        //     optim_lambda_ = gcv_(Rcpp::as<DMatrix<double>>(r_input["lambda"])).fit(model_);
+        // }
+        // if (calibration == "kcv") {
+        //     int n_folds = Rcpp::as<int>(r_input["n_folds"]);
+        //     int seed = r_input["seed"] == R_NilValue ? fdapde::random_seed : Rcpp::as<int>(r_input["seed"]);
+        //     kcv_ = calibration::KCV(n_folds, seed);
+        //     optim_lambda_ = kcv_(Rcpp::as<DMatrix<double>>(r_input["lambda"]), calibration::RMSE()).fit(model_);
+        // }
         model_.set_lambda(optim_lambda_);
         return;
     }
@@ -126,6 +131,51 @@ struct SRPDE : public RegressionModel<models::SRPDE> {
     SRPDE(Rcpp::Environment r_env, int sampling_type) {
         Base::model_ = ModelType(get_env_as<r::PDE>(r_env)->pde, Sampling(sampling_type));
     }
+    void set_spatial_locations(const DMatrix<double>& locs) { Base::model_.set_spatial_locations(locs); }
+
+    // this method is completely experimental. method signature is likely to change, but is ok for the moment
+    // !!
+    // ci_type = 0 -> bonferroni
+    // ci_type = 1 -> simultaneous
+    // ci_type = 2 -> oat
+    // type is one between wald, speckman, esf
+    void inference(
+      const std::string& type, int ci_type, const DMatrix<double>& C, const DVector<double>& beta0, int n_flips) {
+        if (type == "wald") {
+            models::Wald<ModelType, models::exact> inference(Base::model_);
+            inference.setC(C);
+            inference.setBeta0(beta0);
+
+            confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+            pvalues_ = inference.p_value(models::CIType(ci_type));
+	    return;
+        }
+	if (type == "speckman") {
+            models::Speckman<ModelType, models::exact> inference(Base::model_);
+            inference.setC(C);
+            inference.setBeta0(beta0);
+
+            confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+            pvalues_ = inference.p_value(models::CIType(ci_type));
+	    return;
+        }
+        if (type == "esf") {
+            models::ESF<ModelType, models::exact> inference(Base::model_);
+	    inference.setNflip(n_flips);
+            inference.setC(C);
+            inference.setBeta0(beta0);
+
+            confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+            pvalues_ = inference.p_value(models::CIType(ci_type));
+	    return;
+        }
+    }
+  // inference getters
+    const DMatrix<double>& confidence_intervals() const { return confidence_intervals_; }
+    const DVector<double>& pvalues() const { return pvalues_; }
+   private:
+    DMatrix<double> confidence_intervals_;
+    DVector<double> pvalues_;
 };
 
 template <typename RegularizationType> struct GSRPDE : public RegressionModel<models::GSRPDE<RegularizationType>> {
