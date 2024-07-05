@@ -132,9 +132,17 @@ model_parse_args.GSRPDE <- function(x, args) {
       cat("PDE:", private$penalty_$operator, "\n")
       ## S3 dispatch for specific printing logic
     },
-    inference = function(type = c("wald", "speckman", "esf"), ci_type = c("exact", "non-exact"), C, beta0, n_flips = 1000) {
-        ci_type_ = if(ci_type == "exact") 0 else 1
-        private$model_$inference(type, ci_type_, as.matrix(C), as.matrix(beta0), n_flips)
+    inference = function(type = c("wald", "speckman", "esf"), ci_type = c("bonferroni", "simultaneous","one_at_the_time"), method = c("exact", "nonexact"), C, beta0, n_flips = 1000) {
+    type <- match.arg(type)
+    ci_type <- match.arg(ci_type)
+    method <- match.arg(method)  
+       
+    ci_type_ <- switch(ci_type,
+                       "bonferroni" = 0,
+                       "simultaneous" = 1,
+                       "one_at_the_time" = 2) 
+                                                 
+        private$model_$inference(type, ci_type_, method, as.matrix(C), as.matrix(beta0), n_flips)
     }
   ),
   ## active bindings

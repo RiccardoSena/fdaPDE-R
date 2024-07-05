@@ -139,34 +139,60 @@ struct SRPDE : public RegressionModel<models::SRPDE> {
     // ci_type = 1 -> simultaneous
     // ci_type = 2 -> oat
     // type is one between wald, speckman, esf
-    void inference(
-      const std::string& type, int ci_type, const DMatrix<double>& C, const DVector<double>& beta0, int n_flips) {
-        if (type == "wald") {
-            models::Wald<ModelType, models::exact> inference(Base::model_);
-            inference.setC(C);
-            inference.setBeta0(beta0);
+    void inference( 
+      const std::string& type, int ci_type, const std::string& method, const DMatrix<double>& C, const DVector<double>& beta0, int n_flips) {
 
-            confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
-            pvalues_ = inference.p_value(models::CIType(ci_type));
+        if (type == "wald") {
+            if(method == "exact"){
+              models::Wald<ModelType, models::exact> inference(Base::model_);
+              inference.setC(C);
+              inference.setBeta0(beta0);
+              confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+              pvalues_ = inference.p_value(models::CIType(ci_type));
+              }
+            else if (method == "nonexact"){
+              models::Wald<ModelType, models::nonexact> inference(Base::model_);
+              inference.setC(C);
+              inference.setBeta0(beta0);
+              confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+              pvalues_ = inference.p_value(models::CIType(ci_type));
+            }
 	    return;
         }
-	if (type == "speckman") {
-            models::Speckman<ModelType, models::exact> inference(Base::model_);
-            inference.setC(C);
-            inference.setBeta0(beta0);
-
-            confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
-            pvalues_ = inference.p_value(models::CIType(ci_type));
+	    if (type == "speckman") {
+            if(method == "exact"){
+              models::Speckman<ModelType, models::exact> inference(Base::model_);
+              inference.setC(C);
+              inference.setBeta0(beta0);
+              confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+              pvalues_ = inference.p_value(models::CIType(ci_type));
+            }
+            else if (method == "nonexact"){
+              models::Speckman<ModelType, models::nonexact> inference(Base::model_);
+              inference.setC(C);
+              inference.setBeta0(beta0);
+              confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+              pvalues_ = inference.p_value(models::CIType(ci_type));
+            }
 	    return;
         }
         if (type == "esf") {
-            models::ESF<ModelType, models::exact> inference(Base::model_);
-	    inference.setNflip(n_flips);
-            inference.setC(C);
-            inference.setBeta0(beta0);
-
-            confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
-            pvalues_ = inference.p_value(models::CIType(ci_type));
+            if(method == "exact"){
+              models::ESF<ModelType, models::exact> inference(Base::model_);
+              inference.setNflip(n_flips);
+              inference.setC(C);
+              inference.setBeta0(beta0);
+              confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+              pvalues_ = inference.p_value(models::CIType(ci_type));
+            }
+            else if (method == "nonexact"){
+              models::ESF<ModelType, models::nonexact> inference(Base::model_);
+	          inference.setNflip(n_flips);
+              inference.setC(C);
+              inference.setBeta0(beta0);
+              confidence_intervals_ = inference.computeCI(models::CIType(ci_type));
+              pvalues_ = inference.p_value(models::CIType(ci_type));
+            }
 	    return;
         }
     }
